@@ -1,59 +1,48 @@
-const express = require("express");
-const app = express();
-const port = process.env.PORT || 3001;
+import express from 'express'
+import * as dotenv from 'dotenv'
+import cors from 'cors'
+import { Configuration, OpenAIApi } from 'openai'
 
-app.get("/", (req, res) => res.type('html').send(html));
+dotenv.config()
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
+const openai = new OpenAIApi(configuration);
 
-const html = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Hello from Render!</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-    <script>
-      setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          disableForReducedMotion: true
-        });
-      }, 500);
-    </script>
-    <style>
-      @import url("https://p.typekit.net/p.css?s=1&k=vnd5zic&ht=tk&f=39475.39476.39477.39478.39479.39480.39481.39482&a=18673890&app=typekit&e=css");
-      @font-face {
-        font-family: "neo-sans";
-        src: url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff2"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/d?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/a?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("opentype");
-        font-style: normal;
-        font-weight: 700;
-      }
-      html {
-        font-family: neo-sans;
-        font-weight: 700;
-        font-size: calc(62rem / 16);
-      }
-      body {
-        background: white;
-      }
-      section {
-        border-radius: 1em;
-        padding: 1em;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        margin-right: -50%;
-        transform: translate(-50%, -50%);
-      }
-    </style>
-  </head>
-  <body>
-    <section>
-      Hello from Render!
-    </section>
-  </body>
-</html>
-`
+const app = express()
+app.use(cors())
+app.use(express.json())
+
+app.get('/', async (req, res) => {
+  res.status(200).send({
+    message: 'Hello from Codepal!'
+  })
+})
+
+app.post('/', async (req, res) => {
+  try {
+    const prompt = req.body.prompt;
+
+    const response = await openai.createCompletion({
+      model: "text-davinci-003",
+      prompt: `${prompt}`,
+      temperature: 0, // Higher values means the model will take more risks.
+      max_tokens: 3000, // The maximum number of tokens to generate in the completion. Most models have a context length of 2048 tokens (except for the newest models, which support 4096).
+      top_p: 1, // alternative to sampling with temperature, called nucleus sampling
+      frequency_penalty: 0.5, // Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim.
+      presence_penalty: 0, // Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics.
+    });
+
+    res.status(200).send({
+      bot: response.data.choices[0].text
+    });
+
+  } catch (error) {
+    console.error(error)
+    res.status(500).send(error || 'Something went wrong');
+  }
+})
+
+app.listen(5000, () => console.log('AI server started on http://localhost:5000'))
